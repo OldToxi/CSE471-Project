@@ -1,242 +1,302 @@
-import React, { useState } from 'react';
-import { MessageCircle, X, Send } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { MessageCircle, X, Send, Loader, Sparkles, Bot } from 'lucide-react';
 import { getAIResponse } from '../../services/chatbotService';
 
 export default function ChatBot() {
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState([
-    { 
-      id: 1, 
-      text: "Hello! I'm your PothChola travel assistant. How can I help you plan your next adventure?", 
-      sender: 'bot', 
-      timestamp: new Date() 
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    {
+      text: "Hi there! I'm your AI travel assistant. How can I help you plan your trip in Bangladesh today? 🇧🇩",
+      isUser: false
     }
   ]);
-  const [inputMessage, setInputMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [inputText, setInputText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef(null);
 
-  const handleSendMessage = () => {
-    if (inputMessage.trim()) {
-      // Add user message
-      const userMsg = {
-        id: chatMessages.length + 1,
-        text: inputMessage,
-        sender: 'user',
-        timestamp: new Date()
-      };
-      setChatMessages([...chatMessages, userMsg]);
-      setInputMessage('');
-      setIsTyping(true);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
-      // Simulate AI response delay
-      setTimeout(() => {
-        const botResponse = {
-          id: chatMessages.length + 2,
-          text: getAIResponse(inputMessage),
-          sender: 'bot',
-          timestamp: new Date()
-        };
-        setChatMessages(prev => [...prev, botResponse]);
-        setIsTyping(false);
-      }, 1500);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isOpen]);
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+
+    const userMessage = inputText;
+    setInputText("");
+    setMessages(prev => [...prev, { text: userMessage, isUser: true }]);
+    setIsLoading(true);
+
+    try {
+      const aiResponse = await getAIResponse(userMessage);
+      setMessages(prev => [...prev, { text: aiResponse, isUser: false }]);
+    } catch (error) {
+      console.error("Error getting AI response:", error);
+      setMessages(prev => [...prev, {
+        text: "I'm having trouble connecting right now. Please try again later.",
+        isUser: false,
+        isError: true
+      }]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 50 }}>
-      {isChatOpen ? (
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '16px',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-          width: '384px',
-          height: '600px',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden'
-        }}>
-          {/* Chat Header */}
-          <div style={{
-            background: 'linear-gradient(to right, #059669, #0d9488)',
-            padding: '16px',
+    <div style={{
+      position: 'fixed',
+      bottom: '30px',
+      right: '30px',
+      zIndex: 1000,
+      fontFamily: 'Inter, sans-serif'
+    }}>
+      {/* Chat Button */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            backgroundColor: '#059669',
+            color: 'white',
+            border: 'none',
+            boxShadow: '0 8px 24px rgba(5, 150, 105, 0.4)',
+            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'center',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            animation: 'bounce 2s infinite'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.1) rotate(-5deg)';
+            e.currentTarget.style.boxShadow = '0 12px 32px rgba(5, 150, 105, 0.5)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1) rotate(0)';
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(5, 150, 105, 0.4)';
+          }}
+        >
+          <MessageCircle size={32} strokeWidth={2.5} />
+          {/* Notification Dot */}
+          <span style={{
+            position: 'absolute',
+            top: '0',
+            right: '0',
+            width: '16px',
+            height: '16px',
+            backgroundColor: '#ef4444',
+            borderRadius: '50%',
+            border: '2px solid white'
+          }} />
+        </button>
+      )}
+
+      {/* Chat Window */}
+      {isOpen && (
+        <div style={{
+          width: '380px',
+          height: '600px',
+          backgroundColor: 'white',
+          borderRadius: '24px',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          animation: 'scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          border: '1px solid rgba(0,0,0,0.05)'
+        }}>
+          {/* Header */}
+          <div style={{
+            padding: '20px',
+            background: 'linear-gradient(135deg, #059669, #0d9488)',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{
                 width: '40px',
                 height: '40px',
-                backgroundColor: 'white',
+                backgroundColor: 'rgba(255,255,255,0.2)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                backdropFilter: 'blur(4px)'
               }}>
-                <MessageCircle style={{ color: '#059669' }} size={24} />
+                <Bot size={24} />
               </div>
               <div>
-                <h3 style={{ color: 'white', fontWeight: '600', margin: 0 }}>PothChola AI</h3>
-                <p style={{ color: '#d1fae5', fontSize: '12px', margin: 0 }}>Always here to help</p>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', fontFamily: 'Poppins, sans-serif' }}>PothChola AI</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', opacity: 0.9 }}>
+                  <span style={{ width: '8px', height: '8px', backgroundColor: '#4ade80', borderRadius: '50%' }} />
+                  Online
+                </div>
               </div>
             </div>
             <button
-              onClick={() => setIsChatOpen(false)}
+              onClick={() => setIsOpen(false)}
               style={{
-                color: 'white',
-                background: 'transparent',
+                background: 'none',
                 border: 'none',
+                color: 'white',
                 cursor: 'pointer',
-                padding: '4px',
-                borderRadius: '50%'
+                padding: '8px',
+                borderRadius: '50%',
+                transition: 'background-color 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
-              <X size={20} />
+              <X size={24} />
             </button>
           </div>
 
-          {/* Chat Messages */}
+          {/* Messages Area */}
           <div style={{
             flex: 1,
+            padding: '20px',
             overflowY: 'auto',
-            padding: '16px',
             backgroundColor: '#f9fafb',
             display: 'flex',
             flexDirection: 'column',
             gap: '16px'
           }}>
-            {chatMessages.map(msg => (
+            {messages.map((msg, index) => (
               <div
-                key={msg.id}
+                key={index}
                 style={{
-                  display: 'flex',
-                  justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start'
+                  alignSelf: msg.isUser ? 'flex-end' : 'flex-start',
+                  maxWidth: '80%',
+                  animation: 'slideUp 0.3s ease-out'
                 }}
               >
-                <div style={{
-                  maxWidth: '80%',
-                  borderRadius: '16px',
-                  padding: '12px 16px',
-                  backgroundColor: msg.sender === 'user' ? '#059669' : 'white',
-                  color: msg.sender === 'user' ? 'white' : '#1f2937',
-                  boxShadow: msg.sender === 'bot' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                  borderBottomRightRadius: msg.sender === 'user' ? '4px' : '16px',
-                  borderBottomLeftRadius: msg.sender === 'bot' ? '4px' : '16px'
-                }}>
-                  <p style={{ fontSize: '14px', margin: '0 0 4px 0' }}>{msg.text}</p>
+                {!msg.isUser && (
                   <span style={{
                     fontSize: '11px',
-                    color: msg.sender === 'user' ? '#d1fae5' : '#9ca3af'
+                    color: '#6b7280',
+                    marginLeft: '12px',
+                    marginBottom: '4px',
+                    display: 'block'
                   }}>
-                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    AI Assistant
                   </span>
+                )}
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: msg.isUser ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
+                  backgroundColor: msg.isUser ? '#059669' : 'white',
+                  color: msg.isUser ? 'white' : '#1f2937',
+                  boxShadow: msg.isUser ? '0 4px 12px rgba(5, 150, 105, 0.2)' : '0 2px 8px rgba(0,0,0,0.05)',
+                  fontSize: '15px',
+                  lineHeight: '1.5',
+                  border: msg.isUser ? 'none' : '1px solid #e5e7eb'
+                }}>
+                  {msg.text}
                 </div>
               </div>
             ))}
-            {isTyping && (
-              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+            {isLoading && (
+              <div style={{ alignSelf: 'flex-start', animation: 'slideUp 0.3s ease-out' }}>
+                <span style={{ fontSize: '11px', color: '#6b7280', marginLeft: '12px', marginBottom: '4px', display: 'block' }}>AI Assistant</span>
                 <div style={{
+                  padding: '12px 20px',
+                  borderRadius: '20px 20px 20px 4px',
                   backgroundColor: 'white',
-                  borderRadius: '16px',
-                  borderBottomLeftRadius: '4px',
-                  padding: '12px 16px',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                  border: '1px solid #e5e7eb',
+                  display: 'flex',
+                  gap: '4px'
                 }}>
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    <div className="typing-dot"></div>
-                    <div className="typing-dot"></div>
-                    <div className="typing-dot"></div>
-                  </div>
+                  <span style={{ width: '6px', height: '6px', backgroundColor: '#059669', borderRadius: '50%', animation: 'bounce 1s infinite 0s' }} />
+                  <span style={{ width: '6px', height: '6px', backgroundColor: '#059669', borderRadius: '50%', animation: 'bounce 1s infinite 0.2s' }} />
+                  <span style={{ width: '6px', height: '6px', backgroundColor: '#059669', borderRadius: '50%', animation: 'bounce 1s infinite 0.4s' }} />
                 </div>
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
 
-          {/* Chat Input */}
-          <div style={{
-            padding: '16px',
-            backgroundColor: 'white',
-            borderTop: '1px solid #e5e7eb'
-          }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="text"
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Ask me anything..."
-                style={{
-                  flex: 1,
-                  padding: '8px 16px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '24px',
-                  outline: 'none',
-                  fontSize: '14px'
-                }}
-              />
-              <button
-                onClick={handleSendMessage}
-                disabled={!inputMessage.trim()}
-                style={{
-                  backgroundColor: inputMessage.trim() ? '#059669' : '#d1d5db',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '40px',
-                  height: '40px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: inputMessage.trim() ? 'pointer' : 'not-allowed',
-                  transition: 'background-color 0.2s'
-                }}
-              >
-                <Send size={20} />
-              </button>
-            </div>
-          </div>
+          {/* Input Area */}
+          <form
+            onSubmit={handleSendMessage}
+            style={{
+              padding: '16px',
+              backgroundColor: 'white',
+              borderTop: '1px solid #f3f4f6',
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'center'
+            }}
+          >
+            <input
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder="Ask about travel..."
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                borderRadius: '24px',
+                border: '2px solid #e5e7eb',
+                fontSize: '15px',
+                outline: 'none',
+                transition: 'all 0.2s',
+                backgroundColor: '#f9fafb'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#059669';
+                e.target.style.backgroundColor = 'white';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#e5e7eb';
+                e.target.style.backgroundColor = '#f9fafb';
+              }}
+            />
+            <button
+              type="submit"
+              disabled={!inputText.trim() || isLoading}
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: inputText.trim() && !isLoading ? '#059669' : '#e5e7eb',
+                color: 'white',
+                border: 'none',
+                cursor: inputText.trim() && !isLoading ? 'pointer' : 'default',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+                boxShadow: inputText.trim() && !isLoading ? '0 4px 12px rgba(5, 150, 105, 0.3)' : 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (inputText.trim() && !isLoading) {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(5, 150, 105, 0.4)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = inputText.trim() && !isLoading ? '0 4px 12px rgba(5, 150, 105, 0.3)' : 'none';
+              }}
+            >
+              <Send size={20} strokeWidth={2.5} style={{ marginLeft: '2px' }} />
+            </button>
+          </form>
         </div>
-      ) : (
-        <button
-          onClick={() => setIsChatOpen(true)}
-          style={{
-            background: 'linear-gradient(to right, #059669, #0d9488)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '50%',
-            width: '60px',
-            height: '60px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            transition: 'transform 0.3s',
-          }}
-          onMouseEnter={(e) => e.target.style.transform = 'scale(1.1)'}
-          onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
-        >
-          <MessageCircle size={28} />
-        </button>
       )}
-
-      <style>{`
-        .typing-dot {
-          width: 8px;
-          height: 8px;
-          background-color: #9ca3af;
-          border-radius: 50%;
-          animation: bounce 1.4s infinite ease-in-out both;
-        }
-        .typing-dot:nth-child(1) { animation-delay: 0s; }
-        .typing-dot:nth-child(2) { animation-delay: 0.16s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.32s; }
-        
-        @keyframes bounce {
-          0%, 80%, 100% { transform: translateY(0); }
-          40% { transform: translateY(-10px); }
-        }
-      `}</style>
     </div>
   );
 }

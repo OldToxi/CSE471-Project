@@ -1,83 +1,147 @@
-// AI Chatbot Response Logic
-export const getAIResponse = (userMessage) => {
-  const message = userMessage.toLowerCase();
-  
-  // Feature 2.1: Personalized trip suggestions
-  if (message.includes('destination') || message.includes('suggest') || message.includes('recommend') || message.includes('where')) {
-    return "Based on your interests, I'd recommend exploring Cox's Bazar for beaches, Sundarbans for nature, or Sylhet for tea gardens. Which type of destination interests you most?";
-  } 
-  
-  // Feature 2.2: Answer questions about features
-  else if (message.includes('feature') || message.includes('how to') || message.includes('help') || message.includes('what can')) {
-    return "PothChola offers many features: Trip Planning, Interactive Maps, Community Posts, Friend Connections, Travel Points & Rewards, and Agency Packages. What would you like to explore?";
-  } 
-  
-  // Feature 2.2: Friends feature explanation
-  else if (message.includes('friend') || message.includes('social') || message.includes('connect')) {
-    return "You can connect with fellow travelers through our Friends section! Send friend requests, view travel activities, and plan group trips together. Go to the Friends page to get started.";
-  } 
-  
-  // Feature 2.3: Navigation guidance - Map
-  else if (message.includes('map') || message.includes('location') || message.includes('district')) {
-    return "Our Interactive Map feature lets you explore districts, check weather forecasts, view your travel timeline, and get AI-based safety insights for any location. Click on 'Destinations' to explore!";
-  } 
-  
-  // Feature 2.3: Navigation guidance - Community
-  else if (message.includes('post') || message.includes('community') || message.includes('share')) {
-    return "Visit the Community page to share your travel stories, photos, and recommendations! You can also comment on and react to other travelers' posts. Click 'Community' in the navigation.";
-  } 
-  
-  // Feature 2.3: Navigation guidance - Group Events
-  else if (message.includes('group') || message.includes('event') || message.includes('tour')) {
-    return "Want to organize a group trip? Go to the 'Group Events' page where you can create events, invite friends, and plan collaborative tours together!";
-  } 
-  
-  // Feature 2.4: Travel information - Points/Rewards
-  else if (message.includes('point') || message.includes('reward') || message.includes('tier')) {
-    return "Earn travel points by posting trips, writing reviews, and joining events! Progress through Bronze, Silver, and Gold tiers to unlock exclusive rewards. Check your Rewards page to see your current status.";
-  } 
-  
-  // Feature 2.4: Real-time info - Weather
-  else if (message.includes('weather') || message.includes('safe') || message.includes('climate')) {
-    return "I can provide real-time weather updates and safety insights for any district in Bangladesh. Which area are you planning to visit? (Note: Full weather integration coming soon!)";
-  } 
-  
-  // Feature 2.1: Trip history based suggestions
-  else if (message.includes('history') || message.includes('past trip') || message.includes('been to')) {
-    return "I can see your travel history! You've visited Cox's Bazar and Sylhet. Based on that, I'd recommend trying Rangamati for hill tracts or Sundarbans for mangrove forests. Want details?";
+// ============================================
+// REAL AI CHATBOT - Google Gemini API
+// ============================================
+
+// 🔑 GET YOUR FREE API KEY: https://makersuite.google.com/app/apikey
+const GEMINI_API_KEY = 'AIzaSyA1t1OPURDdJIEPmhllF2c4d_iFrOuiRUg';
+
+const SYSTEM_PROMPT = `You are an enthusiastic AI travel assistant for PothChola, a Bangladesh travel platform.
+
+Your capabilities:
+1. Suggest destinations in Bangladesh (Cox's Bazar, Sundarbans, Sylhet, Rangamati, Sajek Valley, Saint Martin, Bandarban, Chittagong Hill Tracts)
+2. Explain platform features:
+   - Friends: Connect with travelers, send requests, view activities
+   - Community: Share posts, photos, comment, react
+   - Group Events: Create/join group tours, collaborative planning
+   - Rewards: Earn points (trips, reviews, posts), unlock Bronze/Silver/Gold tiers
+   - Interactive Maps: District exploration, weather, safety insights
+   - My Trips: Track travel history and timeline
+3. Provide travel tips, weather info, safety updates
+4. Guide users through navigation
+5. Answer questions about Bangladesh tourism
+
+Be friendly, concise (2-4 sentences), and helpful. Focus on Bangladesh destinations.`;
+
+// Main AI Response Function
+export const getAIResponse = async (userMessage, conversationHistory = []) => {
+  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+    console.warn('⚠️ Gemini API key not set. Using fallback responses.');
+    return getFallbackResponse(userMessage);
   }
-  
-  // Feature 2.5: Dynamic engagement - Getting started
-  else if (message.includes('start') || message.includes('begin') || message.includes('new')) {
-    return "Welcome! Let's get you started. First, complete your profile, then explore destinations on the map. You can also join the community to connect with other travelers. What interests you most?";
-  }
-  
-  // Default engaging response
-  else {
-    return "That's interesting! I can help you with trip suggestions, navigation guidance, feature explanations, or travel planning. Try asking me about destinations, features, friends, community, or rewards!";
+
+  try {
+    const recentHistory = conversationHistory.slice(-5);
+    const conversationText = recentHistory
+      .map(msg => `${msg.sender === 'user' ? 'User' : 'Assistant'}: ${msg.text}`)
+      .join('\n');
+
+    const fullPrompt = `${SYSTEM_PROMPT}
+
+${conversationText ? `Previous conversation:\n${conversationText}\n\n` : ''}User: ${userMessage}`;
+
+    // Call Gemini API
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: fullPrompt
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Extract AI response
+    const aiMessage = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!aiMessage) {
+      throw new Error('No response from Gemini');
+    }
+
+    return aiMessage;
+
+  } catch (error) {
+    console.error('❌ Gemini API Error:', error);
+    return getFallbackResponse(userMessage);
   }
 };
 
-// Future: This will connect to your backend API
-export const sendMessageToBackend = async (message, userId) => {
-  try {
-    const response = await fetch('http://localhost:5000/api/chatbot/message', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({
-        message,
-        userId,
-        timestamp: new Date()
-      })
-    });
-    
-    const data = await response.json();
-    return data.response;
-  } catch (error) {
-    console.error('Chatbot API error:', error);
-    return getAIResponse(message); // Fallback to local responses
+// Fallback Responses (when API is unavailable)
+const getFallbackResponse = (userMessage) => {
+  const msg = userMessage.toLowerCase();
+
+  // Destination queries
+  if (msg.includes('beach') || msg.includes('cox')) {
+    return "Cox's Bazar is Bangladesh's most popular beach destination! It has the world's longest natural sea beach (120km). Best time to visit: November-March. ";
   }
+
+  if (msg.includes('hill') || msg.includes('sajek') || msg.includes('bandarban')) {
+    return "For hills, check out Sajek Valley, Bandarban, and Rangamati! These spots offer stunning mountain views, tribal culture, and cool weather. Perfect for trekking! ";
+  }
+
+  if (msg.includes('sundarbans') || msg.includes('mangrove')) {
+    return "The Sundarbans is the world's largest mangrove forest and home to Royal Bengal Tigers! Best visited October-March. Book a guided boat tour for safety. ";
+  }
+
+  if (msg.includes('sylhet') || msg.includes('tea')) {
+    return "Sylhet is famous for tea gardens, Ratargul Swamp Forest, and Jaflong! The lush green landscapes are breathtaking year-round. ";
+  }
+
+  // Platform features
+  if (msg.includes('friend') || msg.includes('connect')) {
+    return "Use the Friends feature to connect with fellow travelers! Send friend requests, view their trips, and plan adventures together. Check the Friends tab in the navigation! ";
+  }
+
+  if (msg.includes('community') || msg.includes('post')) {
+    return "Share your travel stories in the Community! Post photos, write reviews, comment on others' posts, and get inspired. It's like Instagram for Bangladesh travel! ";
+  }
+
+  if (msg.includes('group') || msg.includes('event')) {
+    return "Create or join Group Events to travel with others! Plan group tours, split costs, and make new friends. Perfect for solo travelers looking for company! ";
+  }
+
+  if (msg.includes('reward') || msg.includes('point')) {
+    return "Earn Reward Points by posting trips, writing reviews, and attending events! Unlock Bronze, Silver, and Gold tiers for exclusive perks. Check your progress in Profile! ";
+  }
+
+  if (msg.includes('map')) {
+    return "Use our Interactive Maps to explore all 64 districts! View weather forecasts, safety ratings, and popular attractions. Click on any district to learn more! ";
+  }
+
+  // General queries
+  if (msg.includes('hello') || msg.includes('hi') || msg.includes('hey')) {
+    return "Hello!  I'm your PothChola travel assistant! Ask me about Bangladesh destinations, platform features, or travel tips. How can I help you today?";
+  }
+
+  if (msg.includes('help') || msg.includes('what can you do')) {
+    return "I can help you with: 1) Destination recommendations (beaches, hills, forests), 2) Platform features (Friends, Community, Events, Rewards), 3) Travel tips and navigation. What interests you?";
+  }
+
+  // Default response
+  return "I'm here to help with Bangladesh travel! Ask me about destinations like Cox's Bazar, Sundarbans, or Sylhet, or learn about platform features like Friends, Community, and Rewards! ";
 };
+
+// Export fallback for testing
+export { getFallbackResponse };
