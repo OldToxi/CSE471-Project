@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/layout/Navbar';
 import ChatBot from './components/chatbot/ChatBot';
 import HomePage from './components/pages/HomePage';
@@ -13,6 +14,7 @@ import ProfilePage from './components/pages/ProfilePage';
 
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
+import ForgotPassword from './components/auth/ForgotPassword';
 import DashboardPage from './components/pages/DashboardPage';
 import AgencyDashboard from './components/pages/AgencyDashboard';
 import InteractiveMap from './components/maps/InteractiveMap';
@@ -22,22 +24,9 @@ import LocalGuidePage from './components/pages/LocalGuidePage';
 import CulturePage from './components/pages/CulturePage';
 import TripPlannerPage from './components/pages/TripPlannerPage';
 
-export default function App() {
+function AppContent() {
   const [currentPage, setCurrentPage] = useState('home');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
-
-  const handleLogin = (userData) => {
-    setIsAuthenticated(true);
-    setUser(userData);
-    setCurrentPage('dashboard');
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setUser(null);
-    setCurrentPage('home');
-  };
+  const { user, isAuthenticated, logout } = useAuth();
 
   // List of routes that require authentication
   const protectedRoutes = [
@@ -55,7 +44,7 @@ export default function App() {
   const renderPage = () => {
     // Check if route is protected and user is not logged in
     if (protectedRoutes.includes(currentPage) && !isAuthenticated) {
-      return <Login onLogin={handleLogin} />;
+      return <Login />;
     }
 
     switch (currentPage) {
@@ -79,9 +68,11 @@ export default function App() {
         return <ProfilePage user={user} />;
       // New Routes
       case 'login':
-        return <Login onLogin={handleLogin} />;
+        return <Login />;
       case 'register':
         return <Register />;
+      case 'forgot-password':
+        return <ForgotPassword />;
       case 'dashboard':
         return <DashboardPage user={user} />;
       case 'agency':
@@ -131,7 +122,7 @@ export default function App() {
           setCurrentPage={setCurrentPage}
           isAuthenticated={isAuthenticated}
           user={user}
-          onLogout={handleLogout}
+          onLogout={logout}
         />
       </div>
 
@@ -164,4 +155,12 @@ export default function App() {
       `}</style>
     </div>
   );
-} 
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}

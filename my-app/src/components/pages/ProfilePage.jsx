@@ -1,20 +1,31 @@
-import React from 'react';
-import { MapPin, Calendar, Award, Users, Edit, Camera } from 'lucide-react';
+import React, { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { MapPin, Calendar, Award, Users, Edit, Camera, X, Save } from 'lucide-react';
 
 export default function ProfilePage() {
-  const user = {
-    name: 'MD. Meheraj Hossain',
-    initials: 'MH',
-    email: 'meheraj@pothchola.com',
-    memberSince: 'January 2024',
-    tier: 'Silver Member',
-    bio: 'Travel enthusiast exploring the beauty of Bangladesh. Love discovering hidden gems and sharing experiences with fellow travelers.'
+  const { user, updateProfile } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: user?.name || '',
+    bio: user?.bio || ''
+  });
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      await updateProfile(editForm);
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+    }
   };
 
+  if (!user) return <div>Loading...</div>;
+
   const stats = [
-    { label: 'Trips Completed', value: 12, icon: <MapPin size={24} />, color: '#059669', bg: '#ecfdf5' },
-    { label: 'Friends', value: 45, icon: <Users size={24} />, color: '#0d9488', bg: '#f0fdfa' },
-    { label: 'Travel Points', value: 750, icon: <Award size={24} />, color: '#f59e0b', bg: '#fffbeb' },
+    { label: 'Trips Completed', value: user.trips || 0, icon: <MapPin size={24} />, color: '#059669', bg: '#ecfdf5' },
+    { label: 'Friends', value: user.friends || 0, icon: <Users size={24} />, color: '#0d9488', bg: '#f0fdfa' },
+    { label: 'Travel Points', value: user.points || 0, icon: <Award size={24} />, color: '#f59e0b', bg: '#fffbeb' },
     { label: 'Reviews Written', value: 8, icon: <Edit size={24} />, color: '#3b82f6', bg: '#eff6ff' }
   ];
 
@@ -107,9 +118,15 @@ export default function ProfilePage() {
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             marginTop: '-64px',
             marginBottom: '24px',
-            position: 'relative'
+            position: 'relative',
+            overflow: 'hidden'
           }}>
-            {user.initials}
+            <img
+              src={user.avatar}
+              alt={user.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${user.name}&background=059669&color=fff`; }}
+            />
             <div style={{
               position: 'absolute',
               bottom: '4px',
@@ -124,63 +141,102 @@ export default function ProfilePage() {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '24px' }}>
             <div style={{ flex: 1, minWidth: '300px' }}>
-              <h3 style={{
-                fontSize: '32px',
-                fontWeight: '800',
-                color: '#1f2937',
-                margin: '0 0 8px 0',
-                fontFamily: 'Poppins, sans-serif'
-              }}>
-                {user.name}
-              </h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                <span style={{ color: '#6b7280', fontSize: '15px' }}>{user.email}</span>
-                <span style={{ width: '4px', height: '4px', backgroundColor: '#d1d5db', borderRadius: '50%' }} />
-                <span style={{
-                  color: '#059669',
-                  fontWeight: '600',
-                  backgroundColor: '#ecfdf5',
-                  padding: '4px 12px',
-                  borderRadius: '12px',
-                  fontSize: '13px'
-                }}>
-                  {user.tier}
-                </span>
-              </div>
-              <p style={{ color: '#4b5563', lineHeight: '1.7', fontSize: '16px', maxWidth: '700px' }}>{user.bio}</p>
+              {isEditing ? (
+                <form onSubmit={handleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '500px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Full Name</label>
+                    <input
+                      type="text"
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Bio</label>
+                    <textarea
+                      value={editForm.bio}
+                      onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                      rows={3}
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', resize: 'vertical' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <button type="submit" style={{ padding: '8px 16px', backgroundColor: '#059669', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Save size={16} /> Save
+                    </button>
+                    <button type="button" onClick={() => setIsEditing(false)} style={{ padding: '8px 16px', backgroundColor: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <X size={16} /> Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <h3 style={{
+                    fontSize: '32px',
+                    fontWeight: '800',
+                    color: '#1f2937',
+                    margin: '0 0 8px 0',
+                    fontFamily: 'Poppins, sans-serif'
+                  }}>
+                    {user.name}
+                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#6b7280', fontSize: '15px' }}>{user.email}</span>
+                    <span style={{ width: '4px', height: '4px', backgroundColor: '#d1d5db', borderRadius: '50%' }} />
+                    <span style={{
+                      color: '#059669',
+                      fontWeight: '600',
+                      backgroundColor: '#ecfdf5',
+                      padding: '4px 12px',
+                      borderRadius: '12px',
+                      fontSize: '13px'
+                    }}>
+                      {user.tier}
+                    </span>
+                  </div>
+                  <p style={{ color: '#4b5563', lineHeight: '1.7', fontSize: '16px', maxWidth: '700px' }}>{user.bio}</p>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '14px', marginTop: '20px' }}>
-                <Calendar size={16} />
-                <span>Member since {user.memberSince}</span>
-              </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '14px', marginTop: '20px' }}>
+                    <Calendar size={16} />
+                    <span>Member since {user.memberSince}</span>
+                  </div>
+                </>
+              )}
             </div>
 
-            <button style={{
-              backgroundColor: 'white',
-              color: '#374151',
-              padding: '12px 24px',
-              borderRadius: '12px',
-              border: '2px solid #e5e7eb',
-              cursor: 'pointer',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.2s',
-              fontSize: '15px'
-            }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#d1d5db';
-                e.currentTarget.style.backgroundColor = '#f9fafb';
+            {!isEditing && (
+              <button style={{
+                backgroundColor: 'white',
+                color: '#374151',
+                padding: '12px 24px',
+                borderRadius: '12px',
+                border: '2px solid #e5e7eb',
+                cursor: 'pointer',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s',
+                fontSize: '15px'
               }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#e5e7eb';
-                e.currentTarget.style.backgroundColor = 'white';
-              }}
-            >
-              <Edit size={18} strokeWidth={2.5} />
-              Edit Profile
-            </button>
+                onClick={() => {
+                  setEditForm({ name: user.name, bio: user.bio });
+                  setIsEditing(true);
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.backgroundColor = 'white';
+                }}
+              >
+                <Edit size={18} strokeWidth={2.5} />
+                Edit Profile
+              </button>
+            )}
           </div>
         </div>
       </div>
